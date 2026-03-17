@@ -1,6 +1,14 @@
 # Archivos de video
 *.mp4
 
+# Imagenes generadas
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+
 # Archivos de log
 *.log
 

@@ -31,7 +31,7 @@ import os
 # ============================================================
 # PARÁMETROS - ajustar según el video utilizado
 # ============================================================
-VIDEO_PATH = 'proc_dig_imagenes/trabajo1/trabajo1/video_vehiculo.mp4'  # ruta al video de entrada
+VIDEO_PATH = 'video_vehiculo.mp4'  # ruta al video de entrada
 
 # FPS del video (se lee automáticamente, pero se puede forzar)
 # FPS = 30.0
@@ -68,7 +68,7 @@ print(f"  Resolución : {width} x {height} px")
 print(f"  FPS        : {FPS:.2f}")
 print(f"  Frames     : {total_frames}")
 print(f"  Duración   : {total_frames / FPS:.2f} s")
-print(f"  Δt/frame   : {dt*1000:.2f} ms")
+print(f"  dt/frame   : {dt*1000:.2f} ms")
 print(f"  Escala     : {SCALE:.4f} m/px  ({1/SCALE:.1f} px/m)")
 print("=" * 50)
 
@@ -327,12 +327,14 @@ print("Trayectoria guardada: trayectoria.png")
 
 plt.figure(figsize=(10, 5))
 plt.imshow(cv2.cvtColor(traj_img, cv2.COLOR_BGR2RGB))
-plt.title('Trayectoria del centroide del vehículo (A → B)')
+plt.title('Trayectoria del centroide del vehículo (A -> B)')
 plt.axis('off')
 plt.tight_layout()
 plt.savefig('trayectoria_plot.png', dpi=120, bbox_inches='tight')
 
-print("\n✅ PROCESAMIENTO COMPLETO")
+print("\n[OK] PROCESAMIENTO COMPLETO")
 print(f"   Tipo de movimiento detectado: MRU (Movimiento Rectilíneo Uniforme)")
 print(f"   Velocidad estimada: {velocities_kmh.mean():.1f} km/h")
-plt.show()
+
+# Comentar plt.show() para permitir ejecución sin interfaz gráfica
+# plt.show()
