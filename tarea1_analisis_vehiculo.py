@@ -31,7 +31,7 @@ import os
 # ============================================================
 # PARÁMETROS - ajustar según el video utilizado
 # ============================================================
-VIDEO_PATH = 'video_vehiculo.mp4'  # ruta al video de entrada
+VIDEO_PATH = 'video_prueba.mp4'  # ruta al video de entrada
 
 # FPS del video (se lee automáticamente, pero se puede forzar)
 # FPS = 30.0
@@ -331,6 +331,125 @@ plt.title('Trayectoria del centroide del vehículo (A -> B)')
 plt.axis('off')
 plt.tight_layout()
 plt.savefig('trayectoria_plot.png', dpi=120, bbox_inches='tight')
+
+# ============================================================
+# 9. VIDEO PROCESADO — Superposición de trayectoria, centroide,
+#    velocidad y marcadores de escala sobre el video original.
+#    Muestra la evolución del análisis cuadro a cuadro.
+# ============================================================
+VIDEO_PROCESADO_PATH = 'video_procesado.mp4'
+
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+out_video = cv2.VideoWriter(VIDEO_PROCESADO_PATH, fourcc, FPS, (width, height))
+
+# Reconstruir detecciones por frame para dibujar trayectoria acumulada
+detections = []  # lista de (frame_idx, cx, cy, vx_ms, vx_kmh)
+
+for i, frame in enumerate(frames):
+    t = i * dt
+
+    diff = cv2.absdiff(frame, background)
+    gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+    _, mask_frame = cv2.threshold(gray, 25, 255, cv2.THRESH_BINARY)
+    mask_frame = cv2.morphologyEx(mask_frame, cv2.MORPH_OPEN, kernel)
+    mask_frame = cv2.morphologyEx(mask_frame, cv2.MORPH_CLOSE, kernel)
+    mask_frame = cv2.dilate(mask_frame, kernel, iterations=1)
+
+    contours_v, _ = cv2.findContours(mask_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    cx_det, cy_det = None, None
+    best_c = None
+    if contours_v:
+        contours_v = sorted(contours_v, key=cv2.contourArea, reverse=True)
+        for c in contours_v:
+            area = cv2.contourArea(c)
+            if area > (width * height * 0.5) or area < 3000:
+                continue
+            Mv = cv2.moments(c)
+            if Mv['m00'] != 0:
+                cx_det = int(Mv['m10'] / Mv['m00'])
+                cy_det = int(Mv['m01'] / Mv['m00'])
+                best_c = c
+            break
+
+    # Calcular velocidad instantánea si hay al menos 2 detecciones
+    vx_ms = 0.0
+    vx_kmh = 0.0
+    if cx_det is not None and len(detections) > 0:
+        prev = detections[-1]
+        dx_px = cx_det - prev[1]
+        dt_det = (i - prev[0]) * dt
+        if dt_det > 0:
+            vx_ms = (dx_px * SCALE) / dt_det
+            vx_kmh = vx_ms * 3.6
+
+    if cx_det is not None:
+        detections.append((i, cx_det, cy_det, vx_ms, vx_kmh))
+
+    # --- Dibujar sobre el frame ---
+    frame_out = frame.copy()
+
+    # Marcadores de escala: líneas de referencia A y B
+    cv2.line(frame_out, (PUNTO_A_X, 0), (PUNTO_A_X, height), (0, 255, 255), 2)
+    cv2.line(frame_out, (PUNTO_B_X, 0), (PUNTO_B_X, height), (0, 255, 255), 2)
+    cv2.putText(frame_out, 'A', (PUNTO_A_X - 15, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+    cv2.putText(frame_out, 'B', (PUNTO_B_X + 5, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+    # Barra de escala en la esquina inferior derecha
+    bar_length_m = 5.0  # barra de 5 metros
+    bar_length_px = int(bar_length_m / SCALE)
+    bar_x = width - bar_length_px - 20
+    bar_y = height - 40
+    cv2.line(frame_out, (bar_x, bar_y), (bar_x + bar_length_px, bar_y), (255, 255, 255), 3)
+    cv2.line(frame_out, (bar_x, bar_y - 5), (bar_x, bar_y + 5), (255, 255, 255), 2)
+    cv2.line(frame_out, (bar_x + bar_length_px, bar_y - 5),
+             (bar_x + bar_length_px, bar_y + 5), (255, 255, 255), 2)
+    cv2.putText(frame_out, f'{bar_length_m:.0f} m', (bar_x + bar_length_px // 2 - 20, bar_y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    # Trayectoria acumulada (gradiente azul → rojo)
+    n_det = len(detections)
+    for j in range(n_det):
+        _, cxj, cyj, _, _ = detections[j]
+        ratio = j / max(n_det - 1, 1)
+        color = (int(255 * (1 - ratio)), int(80 * ratio), int(255 * ratio))
+        cv2.circle(frame_out, (cxj, cyj), 4, color, -1)
+        if j > 0:
+            _, cxp, cyp, _, _ = detections[j - 1]
+            cv2.line(frame_out, (cxp, cyp), (cxj, cyj), color, 2)
+
+    # Contorno y centroide actual
+    if best_c is not None and cx_det is not None:
+        cv2.drawContours(frame_out, [best_c], -1, (0, 255, 0), 2)
+        cv2.circle(frame_out, (cx_det, cy_det), 8, (0, 0, 255), -1)
+        cv2.circle(frame_out, (cx_det, cy_det), 12, (0, 0, 255), 2)
+
+    # Panel de información (fondo semitransparente)
+    overlay = frame_out.copy()
+    cv2.rectangle(overlay, (5, 5), (320, 110), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.6, frame_out, 0.4, 0, frame_out)
+
+    cv2.putText(frame_out, f't = {t:.2f} s   Frame {i}/{total_frames}',
+                (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+    if cx_det is not None:
+        pos_m = cx_det * SCALE
+        cv2.putText(frame_out, f'Pos: {pos_m:.2f} m  ({cx_det} px)',
+                    (12, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+        cv2.putText(frame_out, f'Vel: {vx_ms:.2f} m/s  ({vx_kmh:.1f} km/h)',
+                    (12, 76), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+        cv2.putText(frame_out, f'Escala: {SCALE:.4f} m/px',
+                    (12, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
+    else:
+        cv2.putText(frame_out, 'Sin deteccion',
+                    (12, 52), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (100, 100, 100), 1)
+
+    out_video.write(frame_out)
+
+out_video.release()
+print(f"\nVideo procesado guardado: {VIDEO_PROCESADO_PATH}")
 
 print("\n[OK] PROCESAMIENTO COMPLETO")
 print(f"   Tipo de movimiento detectado: MRU (Movimiento Rectilíneo Uniforme)")

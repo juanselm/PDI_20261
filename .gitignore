@@ -40,6 +40,9 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Presentación y guías de exposición
+presentacion/
+
 # Archivos temporales
 *.tmp
 *.bak
