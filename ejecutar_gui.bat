@@ -8,33 +8,26 @@ echo   Vision Artificial - Procesamiento IMG
 echo ====================================================
 echo.
 
-REM Verificar si existe el entorno virtual, si no, crearlo
-if not exist "venv\Scripts\python.exe" (
-    echo [*] Entorno virtual no encontrado. Creando venv...
-    python -m venv venv
-    if !ERRORLEVEL! neq 0 (
-        echo [ERROR] No se pudo crear el entorno virtual.
-        echo         Asegurate de tener Python instalado y en el PATH.
-        pause
-        exit /b 1
-    )
-    echo [*] Instalando dependencias...
-    venv\Scripts\python.exe -m pip install -r requirements.txt
-    if !ERRORLEVEL! neq 0 (
-        echo [ERROR] No se pudieron instalar las dependencias.
-        pause
-        exit /b 1
-    )
-    echo [OK] Entorno virtual listo.
-    echo.
+REM Buscar Python: primero venv local, luego sistema
+if exist "venv\Scripts\python.exe" (
+    set PYTHON_PATH=venv\Scripts\python.exe
+    echo [*] Usando entorno virtual: venv
+) else if exist ".venv\Scripts\python.exe" (
+    set PYTHON_PATH=.venv\Scripts\python.exe
+    echo [*] Usando entorno virtual: .venv
+) else (
+    set PYTHON_PATH=python
+    echo [*] Usando Python del sistema
 )
 
 echo [*] Iniciando interfaz grafica...
-venv\Scripts\python.exe gui_analisis.py
+"%PYTHON_PATH%" gui_analisis.py
 
 if !ERRORLEVEL! neq 0 (
     echo.
-    echo [ERROR] Se produjo un error al ejecutar la aplicacion
+    echo [ERROR] Se produjo un error al ejecutar la aplicacion.
+    echo         Si faltan dependencias ejecuta:
+    echo         pip install -r requirements.txt
     pause
     exit /b 1
 )
