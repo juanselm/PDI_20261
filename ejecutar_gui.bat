@@ -19,7 +19,7 @@ if not exist "venv\Scripts\python.exe" (
         exit /b 1
     )
     echo [*] Instalando dependencias...
-    venv\Scripts\pip install -r requirements.txt
+    venv\Scripts\python.exe -m pip install -r requirements.txt
     if !ERRORLEVEL! neq 0 (
         echo [ERROR] No se pudieron instalar las dependencias.
         pause
@@ -30,7 +30,7 @@ if not exist "venv\Scripts\python.exe" (
 )
 
 echo [*] Iniciando interfaz grafica...
-venv\Scripts\python gui_analisis.py
+venv\Scripts\python.exe gui_analisis.py
 
 if !ERRORLEVEL! neq 0 (
     echo.
