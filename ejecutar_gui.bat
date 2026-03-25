@@ -8,7 +8,17 @@ echo   Vision Artificial - Procesamiento IMG
 echo ====================================================
 echo.
 
-set PYTHON_PATH=C:\Users\juanselm\AppData\Local\Programs\Python\Python313\python.exe
+REM Intentar usar el venv local primero, si no existe usar python del sistema
+if exist "venv\Scripts\python.exe" (
+    set PYTHON_PATH=venv\Scripts\python.exe
+    echo [*] Usando entorno virtual local: venv
+) else if exist ".venv\Scripts\python.exe" (
+    set PYTHON_PATH=.venv\Scripts\python.exe
+    echo [*] Usando entorno virtual local: .venv
+) else (
+    set PYTHON_PATH=python
+    echo [*] Usando Python del sistema
+)
 
 echo [*] Iniciando interfaz grafica...
 "%PYTHON_PATH%" gui_analisis.py
@@ -16,6 +26,8 @@ echo [*] Iniciando interfaz grafica...
 if !ERRORLEVEL! neq 0 (
     echo.
     echo [ERROR] Se produjo un error al ejecutar la aplicacion
+    echo         Asegurate de tener las dependencias instaladas:
+    echo         pip install -r requirements.txt
     pause
     exit /b 1
 )
