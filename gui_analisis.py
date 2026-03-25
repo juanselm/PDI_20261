@@ -524,14 +524,27 @@ print(f"Velocidad media: {{velocities_kmh.mean():.1f}} km/h")
             with open(script_path, 'w', encoding='utf-8') as f:
                 f.write(script_content)
             
+            # Buscar el Python que tenga las dependencias instaladas
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            venv_python = os.path.join(base_dir, 'venv', 'Scripts', 'python.exe')
+            venv_python2 = os.path.join(base_dir, '.venv', 'Scripts', 'python.exe')
+
+            if os.path.exists(venv_python):
+                python_cmd = venv_python
+            elif os.path.exists(venv_python2):
+                python_cmd = venv_python2
+            else:
+                python_cmd = sys.executable
+
+            self._log(f"[*] Python: {python_cmd}")
+
             # Ejecutar script con encoding UTF-8
-            import os
             env = os.environ.copy()
             env['PYTHONIOENCODING'] = 'utf-8'
-            
-            result = subprocess.run([sys.executable, script_path],
-                                  capture_output=True, 
-                                  text=True, 
+
+            result = subprocess.run([python_cmd, script_path],
+                                  capture_output=True,
+                                  text=True,
                                   timeout=600,
                                   env=env,
                                   encoding='utf-8')
